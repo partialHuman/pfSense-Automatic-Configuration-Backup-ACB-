@@ -69,29 +69,14 @@ rclone version
 
 ### ✅ Step 5: Google drive setup
 
-```
-- Navigate to google cloud console:
-```
-<img width="975" height="454" alt="image" src="https://github.com/user-attachments/assets/21505124-a9ea-4710-8596-0c4a007df619" />
 
-```
+- Navigate to google cloud console:
 - Go to pojects > new project
 - Create a new project
 - Then in the navigation menu go to APIs and service > OAuth consent screen
-```
-
-<img width="893" height="433" alt="image" src="https://github.com/user-attachments/assets/e539a495-9dfa-4831-abc8-5c6bdb237d53" />
-
-```
 - Go to audience > + ADD USERS
 - Now navigate to api’s and services  > credentials
-```
-
-<img width="891" height="455" alt="image" src="https://github.com/user-attachments/assets/92bd69de-4cb9-4c0a-ac00-051564ef3591" />
-
-```
 - Copy your client id and client secret
-```
 
 
 ---
@@ -113,54 +98,108 @@ rclone config
 - Advanced Config: Type n and press Enter.
 - Auto Config?
    - Type n and press Enter.
-   - A URL will appear copy it
+   - A URL will appear *copy it*
 
-<img width="974" height="1048" alt="image" src="https://github.com/user-attachments/assets/33e81557-cb65-41e5-a3c5-4f90b3fa5ab8" />
 
 ---
 
-### ✅ Step 6: Config token 
+### ✅ Step 7: Config token 
 
-- Download rclone from (rclone.org/downloads) in  your host machine
+- Download rclone from [rclone](https://rclone.org/downloads/) in  your **Host Machine**
 - A zip file will download. Unzip the file.
-- Inside the folder type cmd in the folder’s path
+- Inside the folder type *cmd* in the folder’s path
 - Command prompt will open paste the url in it
 - It will automatically open the sign in page in the browser
 - Login in into you account (you will get a success message)
-- In the command prompt you will find the client token. Copy it
+- In the command prompt you will find the client token. *Copy it*
+- Paste the token in the pfsense console
+- After setup, list your remotes to confirm:
+```
+rclone listremotes
+```
+-You should see:
+```
+gdrive:
+```
 
 
-Scroll down to:
+### ✅ Step 8: Create the Backup Script in /root/
+
+Navigate to root directory:
 
 ```
-Backup History
+cd /root/
 ```
 
-Shows:
+Create and edit the script using nano:
+```
+nano /root/backup_pfsense.sh
+```
 
-- Date & time  
-- Configuration versions  
+Copy and paste the script inside the file:
+
+```
+#!/bin/sh 
+# Set backup directory and filename
+BACKUP_DIR="/root/pfsense_backups"
+BACKUP_FILE="config-$(date +%F-%H%M).xml"
+RCLONE_REMOTE="gdrive:pfsense_backups"
+ # Create backup directory if it doesn't exist
+mkdir -p "$BACKUP_DIR"
+# Copy pfSense configuration
+cp /cf/conf/config.xml "$BACKUP_DIR/$BACKUP_FILE"
+# Upload backup to Google Drive
+rclone copy "$BACKUP_DIR/$BACKUP_FILE" "$RCLONE_REMOTE"
+# Delete local backups older than 7 days
+find "$BACKUP_DIR" -type f -name "config-*.xml" -mtime +7 -exec rm {} \;
+echo "Backup completed and uploaded to Google Drive."
+
+```
+
+Save and exit:
+```
+Press CTRL + X, then Y, then Enter.
+```
+Make the Script Executable
+```
+chmod +x /root/backup_pfsense.sh
+```
+
+Test the Script
+```
+/root/backup_pfsense.sh
+```
+
+
+🔄 Check if the backup is uploaded to Google Drive.
 
 ---
 
-### ✅ Step 7: Restore Configuration (Recovery Mode)
+### ✅ Step 9: Automate the Backup with Cron
 
-Go to:
-
+Open the cron job editor:
 ```
-System → Configuration → Restore
+crontab -e
 ```
 
-Select backup version  
-Click:
+Add this line at the end to run the backup every night at midnight:
+```
+0 0 * * * /root/backup_pfsense.sh >> /root/backup.log 2>&1
+```
 
-🔄 Restore Configuration
+Save and exit.
+```
+Press Esc then :wq to save and exit
+```
 
-Firewall will reboot and restore settings.
+Verify the Scheduled Job
+```
+crontab -l
+You should see:
+0 0 * * * /root/backup_pfsense.sh >> /root/backup.log 2>&1
+```
 
----
-
-
+*Now, pfSense will automatically back up the configuration to Google Drive every night at 12:00 AM.*
 
 ---
 
